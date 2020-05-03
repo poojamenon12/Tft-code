@@ -1,0 +1,362 @@
+import RPi.GPIO as GPIO
+
+import time
+
+import pygame
+
+from pygame.locals import *
+
+import os
+
+import smtplib
+
+from email.mime.multipart import MIMEMultipart
+
+from email.mime.text import MIMEText
+
+
+
+
+
+# display on pitft
+
+os.putenv('SDL_VIDEODRIVER','fbcon')
+
+os.putenv('SDL_FBDEV','/dev/fb1')
+
+os.putenv('SDL_MOUSEDRV','TSLIB')
+
+os.putenv('SDL_MOUSEDEV','/dev/input/touchscreen')
+
+
+
+pygame.init()
+
+pygame.mouse.set_visible(False)
+
+#color
+
+WHITE = 255,255,255
+
+BLACK= 0,0,0
+
+#display setup
+
+screen=pygame.display.set_mode((320,240))
+
+y_font=pygame.font.Font(None,20)
+
+#buttons
+
+my_checkout={'CHECKOUT':(160,120)}
+
+my_start={'START':(160,120)}
+
+
+
+#GPIO mode setup
+
+GPIO.setmode(GPIO.BCM)
+
+
+
+# setup for log 
+
+item_cost = ['Banana: $0.59','Tomato:$1','Spoon:$2']
+
+item_amt = ['Banana: 0', 'Tomato: 0', 'Spoon: 0']
+
+
+
+# font setup for log display
+
+
+total_items={(50,40):'List of items in your cart'}
+
+
+#GPIO 27 callback function to end the program
+
+
+def GPIO27_cb(channel): 
+
+pygame.display.quit()
+
+    
+#update function for list
+
+def listUpdate(item_detected, q):
+
+    global item_cost, item_amt, i=1
+
+    if item_detected ==banana:
+        item_amt.insert(0,i)
+        i+=1
+    if item_detected ==tomato:
+        item_amt.insert(1,i)
+        i+=1
+    if item_detected ==spoon:
+        item_amt.insert(2,i)
+        i+=1
+         
+
+# GPIO 27 setup
+
+GPIO.setup(27,GPIO.IN,pull_up_down=GPIO.PUD_UP)
+
+GPIO.add_event_detect(27,GPIO.FALLING,callback=GPIO27_cb)
+
+screen.fill(BLACK)
+
+
+
+#image setup for buttons
+
+checkout_img= pygame.image.load("stop.png")
+
+start_img = pygame.image.load("start.png")
+
+checkout_rect = checkout_img.get_rect()
+
+start_rect = start_img.get_rect()
+
+
+checkout_rect= checkout_rect.move(100,60)
+
+start_rect= start_rect.move(100,60)
+
+screen.blit(start_img,start_rect)
+#screen.blit(checkout_img,checkout_rect)
+
+
+
+# button display
+
+for my_text,text_pos in my_start.items():
+
+    text_surface=my_font.render(my_text,True,WHITE)
+
+    rect=text_surface.get_rect(center=text_pos)
+
+
+    screen.blit(text_surface,rect)
+
+
+
+# for cost of items
+
+for text_pos, my_text in item_cost.items():
+
+    text_surface = my_font.render(my_text,True,WHITE)
+
+    rect = text_surface.get_rect(center = text_pos)
+
+    screen.blit(text_surface,rect)
+
+# for number of items
+
+for text_pos, my_text in item_amt.items():
+
+    text_surface = my_font.render(my_text,True,WHITE)
+
+    rect = text_surface.get_rect(center = text_pos)
+
+    screen.blit(text_surface,rect)
+
+            
+
+pygame.display.flip()
+
+
+a=True  #to run level 1
+
+sleepspeed = 0.003  # initial sleep value
+
+
+
+
+
+    
+
+
+
+while a:
+
+# in level 1
+
+    
+
+    screen.fill(BLACK)
+
+    screen.blit(start_img,start_rect)
+
+  
+
+
+   
+#logic for how to detect get information of the detected item
+
+                b = True                
+
+                while b:
+
+
+                # level 2
+                total_items={(50,40):'List of items shopped'}
+                
+                
+                #link the checkout button to mail items
+
+                    screen.fill(BLACK)
+
+                    screen.blit(checkout_img, checkout_rect)
+
+                for my_text,text_pos in my_checkout.items():
+
+                        text_surface=my_font.render(my_text,True,WHITE)
+
+                        rect=text_surface.get_rect(center=text_pos)
+
+                        screen.blit(text_surface,rect)    
+    
+
+                for text_pos,my_text in item_cost.items():
+
+                    text_surface = my_font.render(my_text,True,WHITE)
+    
+
+                    rect = text_surface.get_rect(center = text_pos)
+
+                    screen.blit(text_surface,rect)
+
+
+
+                for text_pos,my_text in item_amt.items():
+
+                    text_surface = my_font.render(my_text,True,WHITE)
+
+                    rect = text_surface.get_rect(center = text_pos)
+
+                    screen.blit(text_surface,rect)
+
+
+
+                pygame.display.flip()
+                        
+
+                    
+
+                    
+
+                            if 130<u<190 and 90<v<150: #checkout button has been $
+
+                                screen.fill(BLACK)
+
+                                screen.blit(checkout_img,checkout_rect)
+
+                                for my_text,text_pos in my_checkout.items():
+
+                                    text_surface=my_font.render(my_text,True,WHITE)
+
+                                    rect=text_surface.get_rect(center=text_pos)
+
+                                    screen.blit(text_surface,rect)
+                                
+                                                                
+                                server = smtplib.SMTP('smtp.gmail.com', 587)
+
+
+
+
+
+                                def mail(items, cost):
+
+                                    server.starttls()
+
+                                    msg = MIMEMultipart()
+
+                                    #message = message_template.substitute(PERSON_NAME=name.title())
+
+                                    msg['From']= 'shopbot5725@gmail.com'
+
+                                    msg['To'] = 'cea95@cornell.edu'
+
+                                    msg['Subject']= "Your Order from SmartKart"
+
+
+
+                                    total = sum(cost)
+
+                                lines = [None]*len(cost) #Array of strings per line 
+
+                                    for i in range(len(cost)):
+
+                                        lines[i] = items[i] + ": $" + str(cost[i]) + "\n"
+
+
+
+                                    display = ''.join(lines)
+
+                                    message = "Thank you for shopping with SmartKart. We have attached your receipt with the mail"
+
+                                    print(display)
+
+                                    msg.attach(MIMEText(message, 'plain'))
+
+
+
+
+                                    #Next, log in to the server
+
+                                server.login("shopbot5725", "wifhuvbgimobchom")
+
+
+
+                                    server.send_message(msg)
+
+                                    del msg
+
+                                    server.quit()
+
+
+
+                                items = ['Banana', 'Spoon', 'Tomato']
+
+                                cost = [0.59, 2.00, 1.00]
+
+
+                                mail(items,cost)
+
+
+
+                              
+                                b = False #closes out of level 2
+
+
+                                break
+
+                               
+                     
+
+
+            elif y>160 and x>200: #quit button has been pressed
+
+             a=False   #closes out of level 1
+
+               
+                GPIO.cleanup()    # for normal exit
+
+
+
+                pygame.display.quit()
+
+
+
+        
+
+
+            pos= pygame.mouse.get_pos()
+
+
+            pygame.quit()
+
+                                    
